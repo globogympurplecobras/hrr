@@ -66,6 +66,11 @@
     white-space:nowrap;
   }
   .toolbar button:active{ transform:scale(.97); }
+  #highlightFilterBtn.active{
+    background:#f5a623;
+    color:#5c3a00;
+    box-shadow:0 0 0 2px #fff inset;
+  }
   #status{
     font-size:.72rem;
     opacity:.95;
@@ -279,6 +284,10 @@
   .race:not(.ticked){
     box-shadow:0 2px 6px rgba(20,15,5,.10);
   }
+  .race.highlighted{
+    outline:3px solid #f5a623;
+    outline-offset:2px;
+  }
   .meta{
     grid-area:meta;
     display:flex;
@@ -316,12 +325,26 @@
     display:flex;
     align-items:center;
     justify-content:center;
+    gap:4px;
   }
   .check input{
     width:30px;
     height:30px;
     accent-color:var(--comp-color,#333);
     cursor:pointer;
+  }
+  .star-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-size:1.35rem;
+    line-height:1;
+    padding:2px;
+    color:#c7c2b3;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .star-btn.active{
+    color:#f5a623;
   }
   .crews{
     grid-area:crews;
@@ -427,6 +450,7 @@
   <p>2026 · Tue 30 Jun – Sun 5 Jul</p>
   <div class="toolbar">
     <input type="text" id="filterBox" placeholder="Filter by crew, competition or race no…">
+    <button id="highlightFilterBtn">☆ Highlights</button>
     <button id="clearAllBtn">Reset day</button>
     <span id="status"><span class="dot"></span><span id="statusText">Connecting…</span></span>
   </div>
@@ -524,6 +548,7 @@ const legend = document.getElementById('legend');
 const statusEl = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const filterBox = document.getElementById('filterBox');
+let showHighlightsOnly = false;
 const tabsEl = document.getElementById('tabs');
 const dayLabelEl = document.getElementById('dayLabel');
 const firstClipInput = document.getElementById('firstClip');
@@ -543,7 +568,7 @@ function defaultState(day, n){
   const races = schedule.days[day].races.filter(r=>!r.interval);
   const idx = races.findIndex(r=>r.n===n);
   const base = startClips[day] || DEFAULT_START_CLIP[day] || "311";
-  return {ticked:false, num: clipNumberFromBase(base, idx), winner:''};
+  return {ticked:false, num: clipNumberFromBase(base, idx), winner:'', highlight:false};
 }
 
 function buildTabs(){
@@ -671,7 +696,7 @@ function raceRowHTML(r, day){
   const berksPicked = st.winner === 'berks';
   const bucksPicked = st.winner === 'bucks';
   return `
-    <div class="race${st.ticked?' ticked':''}" data-race="${r.n}" style="--comp-color:${color}">
+    <div class="race${st.ticked?' ticked':''}${st.highlight?' highlighted':''}" data-race="${r.n}" style="--comp-color:${color}">
       <div class="meta">
         <span class="raceno">#${r.n}</span>
         <span class="time">${r.t}</span>
@@ -693,6 +718,7 @@ function raceRowHTML(r, day){
       </div>
       <div class="check">
         <input type="checkbox" id="chk-${r.n}" ${st.ticked?'checked':''}>
+        <button type="button" class="star-btn${st.highlight?' active':''}" id="star-${r.n}" aria-label="Mark as highlight" title="Mark as highlight">${st.highlight?'★':'☆'}</button>
       </div>
     </div>
   `;
@@ -701,6 +727,7 @@ function raceRowHTML(r, day){
 function wireRow(el, r, day){
   const chk = el.querySelector('input[type="checkbox"]');
   const num = el.querySelector('.num input');
+  const star = el.querySelector('.star-btn');
   const picks = el.querySelectorAll('.crew-pick');
 
   chk.addEventListener('change', ()=>{
@@ -714,6 +741,16 @@ function wireRow(el, r, day){
     num.value = num.value.replace(/[^0-9]/g,'').slice(0,3);
     state[day][r.n] = state[day][r.n] || defaultState(day, r.n);
     state[day][r.n].num = num.value;
+    saveRace(day, r.n);
+  });
+
+  star.addEventListener('click', ()=>{
+    state[day][r.n] = state[day][r.n] || defaultState(day, r.n);
+    const on = !state[day][r.n].highlight;
+    state[day][r.n].highlight = on;
+    star.classList.toggle('active', on);
+    star.textContent = on ? '★' : '☆';
+    el.classList.toggle('highlighted', on);
     saveRace(day, r.n);
   });
 
@@ -773,17 +810,21 @@ function render(){
     return;
   }
   const f = (filterBox.value||'').trim().toLowerCase();
+  const forceOpen = !!f || showHighlightsOnly;
   const sessions = splitIntoSessions(d.races);
 
   sessions.forEach(session=>{
-    const visibleRaces = f
-      ? session.races.filter(r => `${r.n} ${r.t} ${r.c} ${r.berks} ${r.bucks}`.toLowerCase().includes(f))
-      : session.races;
-    if(f && visibleRaces.length === 0) return; // hide empty sessions while filtering
+    let visibleRaces = session.races;
+    if(f) visibleRaces = visibleRaces.filter(r => `${r.n} ${r.t} ${r.c} ${r.berks} ${r.bucks}`.toLowerCase().includes(f));
+    if(showHighlightsOnly) visibleRaces = visibleRaces.filter(r => {
+      const st = (state[currentDay] && state[currentDay][r.n]) || defaultState(currentDay, r.n);
+      return !!st.highlight;
+    });
+    if(forceOpen && visibleRaces.length === 0) return; // hide empty sessions while filtering
 
     const details = document.createElement('details');
     details.className = 'session';
-    const open = f ? true : isSessionOpen(currentDay, session.name);
+    const open = forceOpen ? true : isSessionOpen(currentDay, session.name);
     if(open) details.open = true;
 
     const subLabel = session.precededBy ? `Starts after ${session.precededBy}` : '';
@@ -810,7 +851,7 @@ function render(){
     });
     details.appendChild(body);
 
-    if(!f){
+    if(!forceOpen){
       details.addEventListener('toggle', ()=>{
         setSessionOpen(currentDay, session.name, details.open);
       });
@@ -826,6 +867,11 @@ function applyStateToDOM(){
   const d = schedule.days[currentDay];
   if(!d || d.races.length === 0){ render(); return; }
   if(main.children.length === 0){ render(); return; }
+  if(showHighlightsOnly){
+    // visibility itself depends on synced highlight flags, so just rebuild
+    render();
+    return;
+  }
   d.races.forEach(r=>{
     if(r.interval) return;
     const el = main.querySelector(`.race[data-race="${r.n}"]`);
@@ -833,12 +879,16 @@ function applyStateToDOM(){
     const st = (state[currentDay] && state[currentDay][r.n]) || defaultState(currentDay, r.n);
     const chk = el.querySelector('input[type="checkbox"]');
     const num = el.querySelector('.num input');
+    const star = el.querySelector('.star-btn');
     const picks = el.querySelectorAll('.crew-pick');
     if(document.activeElement !== chk){
       chk.checked = !!st.ticked;
       el.classList.toggle('ticked', !!st.ticked);
     }
     if(document.activeElement !== num) num.value = st.num || '';
+    star.classList.toggle('active', !!st.highlight);
+    star.textContent = st.highlight ? '★' : '☆';
+    el.classList.toggle('highlighted', !!st.highlight);
     picks.forEach(p => p.classList.toggle('picked', p.dataset.side === st.winner));
   });
   buildTabs();
@@ -846,9 +896,16 @@ function applyStateToDOM(){
 
 filterBox.addEventListener('input', render);
 
+document.getElementById('highlightFilterBtn').addEventListener('click', (e)=>{
+  showHighlightsOnly = !showHighlightsOnly;
+  e.currentTarget.classList.toggle('active', showHighlightsOnly);
+  e.currentTarget.textContent = showHighlightsOnly ? '★ Highlights' : '☆ Highlights';
+  render();
+});
+
 document.getElementById('clearAllBtn').addEventListener('click', ()=>{
   const dayName = schedule.days[currentDay].label;
-  if(!confirm(`Reset all ticks, clip numbers and winners for ${dayName} — for everyone viewing this page?`)) return;
+  if(!confirm(`Reset all ticks, clip numbers, winners and highlights for ${dayName} — for everyone viewing this page?`)) return;
   const races = schedule.days[currentDay].races.filter(r=>!r.interval);
   races.forEach(r=>{
     state[currentDay][r.n] = defaultState(currentDay, r.n);
@@ -870,7 +927,7 @@ document.getElementById('renumberBtn').addEventListener('click', ()=>{
   saveStartClip(currentDay, val);
   const races = schedule.days[currentDay].races.filter(r=>!r.interval);
   races.forEach(r=>{
-    state[currentDay][r.n] = state[currentDay][r.n] || {ticked:false, winner:''};
+    state[currentDay][r.n] = state[currentDay][r.n] || {ticked:false, winner:'', highlight:false};
     state[currentDay][r.n].num = clipNumberFromBase(val, races.findIndex(x=>x.n===r.n));
     saveRace(currentDay, r.n);
   });
