@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HRR Race Timetable — Wed 1 July 2026</title>
+<style>
+  :root{
+    --ink:#1a2332;
+    --paper:#f7f5f0;
+    --line:#d8d3c7;
+    --accent:#8a1538; /* HRR maroon-ish */
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    padding:0 0 60px 0;
+  }
+  header{
+    position:sticky;
+    top:0;
+    z-index:20;
+    background:var(--accent);
+    color:#fff;
+    padding:14px 18px 12px;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);
+  }
+  header h1{
+    margin:0 0 2px;
+    font-size:1.25rem;
+    font-weight:700;
+    letter-spacing:.2px;
+  }
+  header p{
+    margin:0;
+    font-size:.8rem;
+    opacity:.9;
+  }
+  .toolbar{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+  .toolbar input[type="text"]{
+    flex:1;
+    min-width:140px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:none;
+    font-size:.9rem;
+  }
+  .toolbar button{
+    background:#fff;
+    color:var(--accent);
+    border:none;
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:.8rem;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .toolbar button:active{ transform:scale(.97); }
+  #status{
+    font-size:.72rem;
+    opacity:.95;
+    margin-left:auto;
+    white-space:nowrap;
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+  #status .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:#f4c542;
+    display:inline-block;
+  }
+  #status.live .dot{ background:#4caf50; }
+  #status.local .dot{ background:#f4c542; }
+  #status.error .dot{ background:#e53935; }
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 10px;
+    padding:10px 18px;
+    background:#fff;
+    border-bottom:1px solid var(--line);
+    font-size:.72rem;
+  }
+  .legend span{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:3px 8px;
+    border-radius:20px;
+    font-weight:600;
+  }
+  .legend .swatch{
+    width:10px;height:10px;border-radius:50%;display:inline-block;
+  }
+  main{
+    padding:14px 10px 0;
+    max-width:900px;
+    margin:0 auto;
+  }
+  .interval{
+    text-align:center;
+    font-weight:700;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    font-size:.78rem;
+    color:#6b5b46;
+    background:repeating-linear-gradient(45deg,#efe6d0,#efe6d0 8px,#e9dfc6 8px,#e9dfc6 16px);
+    border:1px solid #d9cba5;
+    border-radius:10px;
+    padding:10px;
+    margin:18px 0;
+  }
+  .race{
+    background:#fff;
+    border:1px solid var(--line);
+    border-left:7px solid var(--comp-color, #999);
+    border-radius:14px;
+    padding:14px 16px;
+    margin:12px 0;
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    grid-template-areas:
+      "meta comp check"
+      "crews crews crews"
+      "num num num";
+    row-gap:10px;
+    column-gap:14px;
+    align-items:center;
+    transition:box-shadow .15s;
+  }
+  .race.ticked{
+    box-shadow:0 0 0 2px var(--comp-color, #999) inset;
+    background:#fffdf7;
+  }
+  .meta{
+    grid-area:meta;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+  }
+  .raceno{
+    font-weight:800;
+    font-size:1.05rem;
+    color:var(--comp-color,#333);
+    min-width:1.6em;
+  }
+  .time{
+    font-variant-numeric:tabular-nums;
+    font-weight:700;
+    font-size:.95rem;
+    color:var(--ink);
+  }
+  .comp{
+    grid-area:comp;
+    font-size:.72rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:#fff;
+    background:var(--comp-color,#999);
+    padding:3px 9px;
+    border-radius:20px;
+    justify-self:end;
+    white-space:nowrap;
+  }
+  .check{
+    grid-area:check;
+    padding-left:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .check input{
+    width:30px;
+    height:30px;
+    accent-color:var(--comp-color,#333);
+    cursor:pointer;
+  }
+  .crews{
+    grid-area:crews;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px 18px;
+    font-size:.87rem;
+    line-height:1.35;
+    border-top:1px dashed var(--line);
+    padding-top:10px;
+  }
+  .crew-label{
+    font-size:.65rem;
+    font-weight:700;
+    text-transform:uppercase;
+    color:#8a8577;
+    letter-spacing:.4px;
+  }
+  .crew-name{
+    font-weight:600;
+  }
+  .num{
+    grid-area:num;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    justify-content:flex-end;
+    border-top:1px dashed var(--line);
+    padding-top:10px;
+  }
+  .num label{
+    font-size:.72rem;
+    font-weight:700;
+    color:#6b6558;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+  }
+  .num input{
+    width:72px;
+    text-align:center;
+    font-size:1.1rem;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    padding:8px 4px;
+    border:2px solid var(--line);
+    border-radius:9px;
+    letter-spacing:2px;
+  }
+  .num input:focus{
+    outline:none;
+    border-color:var(--comp-color,#333);
+  }
+  footer{
+    text-align:center;
+    font-size:.72rem;
+    color:#8a8577;
+    padding:20px 0 10px;
+  }
+  @media (min-width:640px){
+    .race{
+      grid-template-columns:auto auto 1fr auto auto;
+      grid-template-areas: "meta comp crews num check";
+      column-gap:20px;
+    }
+    .crews{ border-top:none; padding-top:0; border-left:1px dashed var(--line); padding-left:16px; }
+    .num{ border-top:none; padding-top:0; padding-right:14px; border-right:1px dashed var(--line); }
+    .check{ padding-left:0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Henley Royal Regatta — Race Timetable</h1>
+  <p>Wednesday 1 July 2026 · 86 races</p>
+  <div class="toolbar">
+    <input type="text" id="filterBox" placeholder="Filter by crew, competition or race no…">
+    <button id="clearAllBtn">Reset all</button>
+    <span id="status"><span class="dot"></span><span id="statusText">Connecting…</span></span>
+  </div>
+</header>
+
+<div class="legend" id="legend"></div>
+
+<main id="main"></main>
+
+<footer>Source: hrr.co.uk race timetable, Wed 1 Jul 2026 · Shared live between everyone viewing this page</footer>
+
+<!-- ======================================================================
+     FIREBASE SETUP — see README.md for step-by-step instructions.
+     Replace the placeholder values below with your own Firebase project
+     config. Until you do, the app runs in local-only mode (this device
+     only, no sharing between people).
+     ====================================================================== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAfDP69QBaMfn6Bn7IxWoCm87nA8--oifc",
+    authDomain: "hrr-race-log.firebaseapp.com",
+    databaseURL: "https://hrr-race-log-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "hrr-race-log",
+    storageBucket: "hrr-race-log.firebasestorage.app",
+    messagingSenderId: "517841464486",
+    appId: "1:517841464486:web:6c25fcd0f1d93c56d8d867"
+  };
+</script>
+
+<script>
+const races = [
+{n:1,t:"09:00",c:"P Albert",berks:"704 A.U.S.R. Orca, NED",bucks:"709 Cambridge Univ."},
+{n:2,t:"09:05",c:"Temple",berks:"195 Univ. of London",bucks:"156 Newcastle Univ."},
+{n:3,t:"09:10",c:"Danesfield",berks:"480 Cantabrigian R.C.",bucks:"481 Christiania R.K., NOR"},
+{n:4,t:"09:15",c:"P Philip",berks:"331 TBC Racing, USA",bucks:"328 St. Edward's Sch."},
+{n:5,t:"09:20",c:"Island",berks:"219 Edinburgh Univ. 'A'",bucks:"205 Bath Univ."},
+{n:6,t:"09:25",c:"P Albert",berks:"725 Massachusetts Inst. Tech., USA",bucks:"731 Oxford Univ. 'B'"},
+{n:7,t:"09:30",c:"Temple",berks:"189 Trinity Coll., Hartford, USA",bucks:"134 Drexel Univ., USA"},
+{n:8,t:"09:35",c:"Wargrave",berks:"102 Sydney R.C., AUS",bucks:"96 Molesey B.C. 'C'"},
+{n:9,t:"09:40",c:"Thames",berks:"31 City of Cambridge R.C.",bucks:"33 Cork B.C., IRL"},
+{n:10,t:"09:45",c:"Wyfold",berks:"393 London R.C.",bucks:"414 Sydney R.C. 'B', AUS"},
+{n:11,t:"09:50",c:"Britannia",berks:"694 Thames R.C. 'B'",bucks:"690 Shoreham R.C."},
+{n:12,t:"09:55",c:"PE",berks:"288 St. Paul's Sch.",bucks:"271 KAND R.C., AUS"},
+{interval:"Racing continues"},
+{n:13,t:"10:00",c:"Temple",berks:"191 Univ. of Bristol",bucks:"128 Cambridge Univ. 'B'"},
+{n:14,t:"10:05",c:"Wargrave",berks:"94 Molesey B.C. 'A'",bucks:"86 Lea R.C."},
+{n:15,t:"10:10",c:"Thames",berks:"34 Crabtree B.C.",bucks:"62 Thames R.C. 'A'"},
+{n:16,t:"10:15",c:"Britannia",berks:"688 Royal Chester R.C.",bucks:"673 Fairmount R.A., USA"},
+{n:17,t:"10:20",c:"Island",berks:"229 Oxford Brookes Univ. 'B'",bucks:"225 Newcastle Univ. 'B'"},
+{n:18,t:"10:25",c:"Danesfield",berks:"499 St. Andrew B.C.",bucks:"502 Thames R.C. 'A'"},
+{interval:"Racing continues"},
+{n:19,t:"10:30",c:"Q Victoria",berks:"517 Edinburgh Univ.",bucks:"528 Reading Univ. 'C'"},
+{n:20,t:"10:35",c:"P Philip",berks:"329 St. Paul's Girls' Sch.",bucks:"324 Shiplake Coll."},
+{n:21,t:"10:40",c:"Wyfold",berks:"415 Thames R.C. 'A'",bucks:"395 Marlow R.C."},
+{n:22,t:"10:45",c:"P Albert",berks:"726 Melbourne Univ., AUS",bucks:"738 Univ. of London"},
+{n:23,t:"10:50",c:"PE",berks:"290 Sydney Univ. B.C., AUS",bucks:"284 Shrewsbury Sch."},
+{n:24,t:"10:55",c:"Temple",berks:"127 Cambridge Univ. 'A'",bucks:"165 Oxford Brookes Univ. 'D'"},
+{interval:"Racing continues"},
+{n:25,t:"11:00",c:"Q Victoria",berks:"534 Univ. of London",bucks:"527 Reading Univ. 'B'"},
+{n:26,t:"11:05",c:"Temple",berks:"136 Durham Univ.",bucks:"173 Santa Clara Univ., USA"},
+{n:27,t:"11:10",c:"Thames",berks:"59 R.V. Osnabrücker, GER",bucks:"42 Leander Club"},
+{n:28,t:"11:15",c:"Wargrave",berks:"109 Tyne A.R.C.",bucks:"104 Thames R.C. 'B'"},
+{n:29,t:"11:20",c:"Britannia",berks:"679 London R.C. 'A'",bucks:"680 London R.C. 'B'"},
+{n:30,t:"11:25",c:"PE",berks:"282 Reading Blue Coat Sch.",bucks:"256 Bedford Sch."},
+{interval:"Racing continues"},
+{n:31,t:"11:30",c:"Wyfold",berks:"409 St. Andrew B.C. 'A'",bucks:"392 K.R.C. Gent, BEL"},
+{n:32,t:"11:35",c:"P Albert",berks:"713 Edinburgh Univ.",bucks:"736 Univ. Coll., Dublin, IRL"},
+{n:33,t:"11:40",c:"Danesfield",berks:"478 Avon R.C., NZL",bucks:"489 Marlow R.C."},
+{n:34,t:"11:45",c:"P Philip",berks:"339 Winter Park Crew, USA",bucks:"334 Lady Eleanor Holles Sch."},
+{n:35,t:"11:50",c:"Island",berks:"217 Durham Univ. 'B'",bucks:"211 Cambridge Univ. 'A'"},
+{n:36,t:"11:55",c:"Temple",berks:"201 Yale Univ., USA",bucks:"163 Oxford Brookes Univ. 'B'"},
+{interval:"Racing continues"},
+{n:37,t:"12:00",c:"Temple",berks:"159 Nottingham Univ.",bucks:"181 St. Paul's Sch."},
+{n:38,t:"12:05",c:"Thames",berks:"56 Potomac B.C., USA",bucks:"50 Mercantile R.C., AUS"},
+{n:39,t:"12:10",c:"Britannia",berks:"682 Marlow R.C.",bucks:"678 Lea R.C."},
+{n:40,t:"12:15",c:"Wargrave",berks:"89 London R.C. 'A'",bucks:"79 City Of Cambridge R.C."},
+{n:41,t:"12:20",c:"PE",berks:"281 Radley Coll.",bucks:"254 Abingdon Sch."},
+{interval:"Luncheon interval"},
+{n:42,t:"14:00",c:"Temple",berks:"162 Oxford Brookes Univ. 'A'",bucks:"118 A.U.S.R. Orca, NED"},
+{n:43,t:"14:05",c:"P Philip",berks:"316 Kingston Grammar Sch.",bucks:"306 Chicago R.F., USA"},
+{n:44,t:"14:10",c:"Island",berks:"224 Newcastle Univ. 'A'",bucks:"253 Yale Univ., 'B' USA"},
+{n:45,t:"14:15",c:"Danesfield",berks:"505 Tideway Scullers' Sch.",bucks:"485 Leander Club"},
+{n:46,t:"14:20",c:"Wyfold",berks:"400 Molesey B.C.",bucks:"371 Agecroft R.C. 'B'"},
+{interval:"Racing continues"},
+{n:47,t:"14:30",c:"Wyfold",berks:"398 Minerva Bath R.C.",bucks:"413 Sydney R.C. 'A', AUS"},
+{n:48,t:"14:35",c:"Wargrave",berks:"90 London R.C. 'B'",bucks:"103 Thames R.C. 'A'"},
+{n:49,t:"14:40",c:"PE",berks:"296 Windsor Boys' Sch.",bucks:"270 Hampton Sch."},
+{n:50,t:"14:45",c:"Island",berks:"212 Cambridge Univ. 'B'",bucks:"215 D.S.R.V. Laga, NED"},
+{n:51,t:"14:50",c:"P Philip",berks:"314 Headington Sch.",bucks:"315 Henley R.C."},
+{interval:"Racing continues"},
+{n:52,t:"15:00",c:"Temple",berks:"183 Sydney Univ., AUS",bucks:"119 A.S.R. Nereus 'A', NED"},
+{n:53,t:"15:05",c:"Thames",berks:"48 Marlow R.C. 'A'",bucks:"70 Vesta R.C. 'A'"},
+{n:54,t:"15:10",c:"PE",berks:"273 King's Coll. Sch.",bucks:"263 Deerfield Academy, USA"},
+{n:55,t:"15:15",c:"Wyfold",berks:"408 R.V. Datteln, GER",bucks:"401 Northwich R.C."},
+{n:56,t:"15:20",c:"Britannia",berks:"663 Avon R.C., NZL",bucks:"677 K.A.R.Z.V. De Hoop, NED"},
+{interval:"Racing continues"},
+{n:57,t:"15:30",c:"Temple",berks:"120 A.S.R. Nereus 'B', NED",bucks:"155 Massachusetts Inst. Tech., USA"},
+{n:58,t:"15:35",c:"P Philip",berks:"318 Latymer Upper Sch.",bucks:"307 Deerfield Academy, USA"},
+{n:59,t:"15:40",c:"Island",berks:"226 Nottingham Univ.",bucks:"220 Edinburgh Univ. 'B'"},
+{n:60,t:"15:45",c:"Britannia",berks:"684 Nottingham R.C.",bucks:"693 Thames R.C. 'A'"},
+{n:61,t:"15:50",c:"Wargrave",berks:"105 Thames R.C. 'C'",bucks:"76 Avon R.C., NZL"},
+{interval:"Racing continues"},
+{n:62,t:"16:00",c:"Temple",berks:"131 D.S.R.V. Laga 'B', NED",bucks:"184 Syracuse Univ., USA"},
+{n:63,t:"16:05",c:"Danesfield",berks:"491 Molesey B.C.",bucks:"511 Worcester R.C."},
+{n:64,t:"16:10",c:"Thames",berks:"45 London R.C. 'B'",bucks:"41 K.R.Z.V. De Maas, NED"},
+{n:65,t:"16:15",c:"Wyfold",berks:"405 Quintin B.C.",bucks:"397 Mercantile R.C., AUS"},
+{n:66,t:"16:20",c:"Temple",berks:"166 Oxford Brookes Univ. 'E'",bucks:"117 A.L.S.R.V. Asopos de Vliet, NED"},
+{interval:"Tea interval"},
+{n:67,t:"17:30",c:"Temple",berks:"200 Wesleyan Univ., USA",bucks:"144 G.S.R. Aegir, NED"},
+{n:68,t:"17:35",c:"Temple",berks:"152 K.S.R.V. Njord, NED",bucks:"149 Imperial Coll. London"},
+{n:69,t:"17:40",c:"Britannia",berks:"699 Vesta R.C.",bucks:"683 Molesey B.C."},
+{n:70,t:"17:45",c:"Island",berks:"250 Univ. of Washington, 'B' USA",bucks:"209 Brown Univ., 'B' USA"},
+{n:71,t:"17:50",c:"Danesfield",berks:"486 London R.C. 'A'",bucks:"487 London R.C. 'B'"},
+{interval:"Racing continues"},
+{n:72,t:"18:00",c:"Danesfield",berks:"500 Strathclyde Park R.C.",bucks:"496 Nottingham & Union R.C."},
+{n:73,t:"18:05",c:"Temple",berks:"164 Oxford Brookes Univ. 'C'",bucks:"130 D.S.R.V. Laga 'A', NED"},
+{n:74,t:"18:10",c:"Wargrave",berks:"95 Molesey B.C. 'B'",bucks:"87 Leander Club"},
+{n:75,t:"18:15",c:"P Philip",berks:"323 Rowamerica Rye, USA",bucks:"309 Enniskillen Royal B.C."},
+{n:76,t:"18:20",c:"Thames",berks:"61 Sydney R.C., AUS",bucks:"63 Thames R.C. 'B'"},
+{interval:"Racing continues"},
+{n:77,t:"18:30",c:"Wyfold",berks:"420 Vesta R.C.",bucks:"416 Thames R.C. 'B'"},
+{n:78,t:"18:35",c:"Wargrave",berks:"78 City of Bristol R.C.",bucks:"93 Mercantile R.C., AUS"},
+{n:79,t:"18:40",c:"Island",berks:"222 Imperial Coll. London",bucks:"245 Univ. of London"},
+{n:80,t:"18:45",c:"Danesfield",berks:"501 Swan River R.C., AUS",bucks:"503 Thames R.C. 'B'"},
+{n:81,t:"18:50",c:"Temple",berks:"171 Radley Coll.",bucks:"199 Univ. of Washington, USA"},
+{interval:"Racing continues"},
+{n:82,t:"19:00",c:"Britannia",berks:"700 Wallingford R.C.",bucks:"685 Potomac B.C., USA"},
+{n:83,t:"19:05",c:"PE",berks:"266 Enniskillen Royal B.C.",bucks:"286 St. Edward's Sch."},
+{n:84,t:"19:10",c:"Thames",berks:"44 London R.C. 'A'",bucks:"51 Molesey B.C."},
+{n:85,t:"19:15",c:"PE",berks:"300 Westminster Sch.",bucks:"283 Shiplake Coll."},
+{n:86,t:"19:20",c:"P Philip",berks:"327 Sir William Perkins's Sch.",bucks:"313 Green Lake Crew, USA"},
+];
+
+const compColors = {
+  "P Albert":"#8a1538",
+  "Temple":"#1f6f4a",
+  "Danesfield":"#b5651d",
+  "P Philip":"#2a5db0",
+  "Island":"#6a3d9a",
+  "Wargrave":"#c2185b",
+  "Thames":"#00838f",
+  "Wyfold":"#5d4037",
+  "Britannia":"#c77d00",
+  "PE":"#3949ab",
+  "Q Victoria":"#43825a",
+};
+
+// EVS-style clip numbering: within each block of 10, 1-9 then 0.
+// e.g. 311,312,...,319,310, then 321,...,329,320, then 331...
+function defaultClipNumber(raceIndex){
+  const i = raceIndex - 1; // zero-based
+  const block = 31 + Math.floor(i / 10);
+  const posInBlock = i % 10; // 0..9
+  const lastDigit = posInBlock === 9 ? 0 : posInBlock + 1;
+  return String(block * 10 + lastDigit);
+}
+
+const main = document.getElementById('main');
+const legend = document.getElementById('legend');
+const statusEl = document.getElementById('status');
+const statusText = document.getElementById('statusText');
+const filterBox = document.getElementById('filterBox');
+
+// build legend
+Object.entries(compColors).forEach(([name,color])=>{
+  const s = document.createElement('span');
+  s.style.background = color + '22';
+  s.style.color = color;
+  s.innerHTML = `<span class="swatch" style="background:${color}"></span>${name}`;
+  legend.appendChild(s);
+});
+
+let state = {}; // { [raceNo]: {ticked:bool, num:string} }
+let useFirebase = false;
+let dbRef = null;
+const LOCAL_KEY = 'hrr-race-state-v1';
+
+function setStatus(mode, text){
+  statusEl.className = mode;
+  statusText.textContent = text;
+}
+
+function defaultState(n){
+  return {ticked:false, num: defaultClipNumber(n)};
+}
+
+// ---------- Firebase (shared, multi-user) ----------
+function initFirebase(){
+  try{
+    if(!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('YOUR_') === 0){
+      throw new Error('not configured');
+    }
+    if(!firebaseConfig.databaseURL || firebaseConfig.databaseURL.indexOf('YOUR_') === 0){
+      throw new Error('not configured');
+    }
+    firebase.initializeApp(firebaseConfig);
+    dbRef = firebase.database().ref('races');
+    useFirebase = true;
+
+    dbRef.on('value', snap => {
+      state = snap.val() || {};
+      // fill in any missing races with defaults (first-ever load)
+      let needsSeed = false;
+      races.forEach(r=>{
+        if(r.interval) return;
+        if(!state[r.n]){ needsSeed = true; }
+      });
+      if(needsSeed){
+        races.forEach(r=>{
+          if(r.interval) return;
+          if(!state[r.n]) state[r.n] = defaultState(r.n);
+        });
+      }
+      applyStateToDOM(true);
+      setStatus('live', 'Live · shared with everyone');
+    }, err => {
+      console.error(err);
+      setStatus('error', 'Connection error — check Firebase rules');
+    });
+  }catch(e){
+    useFirebase = false;
+    initLocalFallback();
+  }
+}
+
+function saveRace(n){
+  if(useFirebase){
+    dbRef.child(String(n)).set(state[n]).catch(()=>{
+      setStatus('error', 'Save failed — check connection');
+    });
+  }else{
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+    setStatus('local', 'Saved on this device only');
+  }
+}
+
+// ---------- Local fallback (single device, no sharing) ----------
+function initLocalFallback(){
+  try{
+    const raw = localStorage.getItem(LOCAL_KEY);
+    state = raw ? JSON.parse(raw) : {};
+  }catch(e){ state = {}; }
+  races.forEach(r=>{
+    if(r.interval) return;
+    if(!state[r.n]) state[r.n] = defaultState(r.n);
+  });
+  render(filterBox.value);
+  setStatus('local', 'Local-only mode — add Firebase config to share (see README)');
+}
+
+// ---------- Rendering ----------
+function raceRowHTML(r){
+  const color = compColors[r.c] || '#666';
+  const st = state[r.n] || defaultState(r.n);
+  return `
+    <div class="race${st.ticked?' ticked':''}" data-race="${r.n}" style="--comp-color:${color}">
+      <div class="meta">
+        <span class="raceno">#${r.n}</span>
+        <span class="time">${r.t}</span>
+      </div>
+      <div class="comp">${r.c}</div>
+      <div class="crews">
+        <div>
+          <div class="crew-label">Berks</div>
+          <div class="crew-name">${r.berks}</div>
+        </div>
+        <div>
+          <div class="crew-label">Bucks</div>
+          <div class="crew-name">${r.bucks}</div>
+        </div>
+      </div>
+      <div class="num">
+        <label for="num-${r.n}">No.</label>
+        <input id="num-${r.n}" type="text" inputmode="numeric" maxlength="3" pattern="[0-9]*" value="${st.num||''}">
+      </div>
+      <div class="check">
+        <input type="checkbox" id="chk-${r.n}" ${st.ticked?'checked':''}>
+      </div>
+    </div>
+  `;
+}
+
+function wireRow(el, r){
+  const chk = el.querySelector('input[type="checkbox"]');
+  const num = el.querySelector('input[type="text"]');
+
+  chk.addEventListener('change', ()=>{
+    state[r.n] = state[r.n] || defaultState(r.n);
+    state[r.n].ticked = chk.checked;
+    el.classList.toggle('ticked', chk.checked);
+    saveRace(r.n);
+  });
+
+  num.addEventListener('input', ()=>{
+    num.value = num.value.replace(/[^0-9]/g,'').slice(0,3);
+    state[r.n] = state[r.n] || defaultState(r.n);
+    state[r.n].num = num.value;
+    saveRace(r.n);
+  });
+}
+
+function render(filterText){
+  main.innerHTML = '';
+  const f = (filterText||'').trim().toLowerCase();
+  races.forEach(r=>{
+    if(r.interval){
+      if(!f){
+        const div = document.createElement('div');
+        div.className = 'interval';
+        div.textContent = r.interval;
+        main.appendChild(div);
+      }
+      return;
+    }
+    const hay = `${r.n} ${r.t} ${r.c} ${r.berks} ${r.bucks}`.toLowerCase();
+    if(f && !hay.includes(f)) return;
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = raceRowHTML(r).trim();
+    const el = wrap.firstElementChild;
+    main.appendChild(el);
+    wireRow(el, r);
+  });
+}
+
+// Called whenever fresh data arrives from Firebase. Rebuilds the list only
+// when the set of visible races has changed (e.g. first load); otherwise
+// updates values in place and skips any field the user is actively typing
+// in, so nobody's cursor gets kicked out mid-edit.
+let lastRenderedFilter = null;
+function applyStateToDOM(){
+  const f = filterBox.value;
+  if(lastRenderedFilter === null || main.children.length === 0){
+    render(f);
+    lastRenderedFilter = f;
+    return;
+  }
+  races.forEach(r=>{
+    if(r.interval) return;
+    const el = main.querySelector(`.race[data-race="${r.n}"]`);
+    if(!el) return;
+    const st = state[r.n] || defaultState(r.n);
+    const chk = el.querySelector('input[type="checkbox"]');
+    const num = el.querySelector('input[type="text"]');
+    if(document.activeElement !== chk){
+      chk.checked = !!st.ticked;
+      el.classList.toggle('ticked', !!st.ticked);
+    }
+    if(document.activeElement !== num){
+      num.value = st.num || '';
+    }
+  });
+}
+
+filterBox.addEventListener('input', ()=>{
+  render(filterBox.value);
+  lastRenderedFilter = filterBox.value;
+});
+
+document.getElementById('clearAllBtn').addEventListener('click', ()=>{
+  if(!confirm('Reset all ticks and clip numbers back to defaults for everyone viewing this page?')) return;
+  races.forEach(r=>{
+    if(r.interval) return;
+    state[r.n] = defaultState(r.n);
+    saveRace(r.n);
+  });
+  render(filterBox.value);
+});
+
+initFirebase();
+</script>
+</body>
+</html>
