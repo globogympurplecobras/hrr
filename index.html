@@ -220,8 +220,7 @@
     grid-template-areas:
       "meta comp check"
       "crews crews crews"
-      "num num num"
-      "winner winner winner";
+      "num num num";
     row-gap:10px;
     column-gap:14px;
     align-items:center;
@@ -239,11 +238,6 @@
   }
   .race.ticked .raceno{
     color:#8a8577;
-  }
-  .race.ticked .crew-name{
-    text-decoration:line-through;
-    text-decoration-thickness:1.5px;
-    text-decoration-color:#8a8577;
   }
   .race:not(.ticked){
     box-shadow:0 2px 6px rgba(20,15,5,.10);
@@ -296,11 +290,26 @@
     grid-area:crews;
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:6px 18px;
+    gap:6px 10px;
     font-size:.87rem;
     line-height:1.35;
     border-top:1px dashed var(--line);
     padding-top:10px;
+  }
+  .crew-pick{
+    cursor:pointer;
+    padding:6px 8px;
+    border-radius:9px;
+    border:2px solid transparent;
+    transition:background .15s, border-color .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .crew-pick:active{
+    background:#f1eee4;
+  }
+  .crew-pick.picked{
+    background:#eaf5ec;
+    border-color:#2e7d32;
   }
   .crew-label{
     font-size:.65rem;
@@ -308,9 +317,22 @@
     text-transform:uppercase;
     color:#8a8577;
     letter-spacing:.4px;
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+  .crew-pick.picked .crew-label{
+    color:#2e7d32;
+  }
+  .crew-pick.picked .crew-label::before{
+    content:"🏆";
+    font-size:.75rem;
   }
   .crew-name{
     font-weight:600;
+  }
+  .crew-pick.picked .crew-name{
+    color:#1e5a25;
   }
   .num{
     grid-area:num;
@@ -343,33 +365,6 @@
     outline:none;
     border-color:var(--comp-color,#333);
   }
-  .winner{
-    grid-area:winner;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    border-top:1px dashed var(--line);
-    padding-top:10px;
-  }
-  .winner label{
-    font-size:.72rem;
-    font-weight:700;
-    color:#6b6558;
-    text-transform:uppercase;
-    letter-spacing:.4px;
-    white-space:nowrap;
-  }
-  .winner input{
-    flex:1;
-    font-size:.85rem;
-    padding:7px 9px;
-    border:2px solid var(--line);
-    border-radius:8px;
-  }
-  .winner input:focus{
-    outline:none;
-    border-color:var(--comp-color,#333);
-  }
   footer{
     text-align:center;
     font-size:.72rem;
@@ -379,9 +374,7 @@
   @media (min-width:640px){
     .race{
       grid-template-columns:auto auto 1fr auto auto;
-      grid-template-areas:
-        "meta comp crews num check"
-        "winner winner winner winner winner";
+      grid-template-areas: "meta comp crews num check";
       column-gap:20px;
     }
     .crews{ border-top:none; padding-top:0; border-left:1px dashed var(--line); padding-left:16px; }
@@ -638,6 +631,8 @@ function initLocalFallback(){
 function raceRowHTML(r, day){
   const color = colorFor(r.c);
   const st = (state[day] && state[day][r.n]) || defaultState(day, r.n);
+  const berksPicked = st.winner === 'berks';
+  const bucksPicked = st.winner === 'bucks';
   return `
     <div class="race${st.ticked?' ticked':''}" data-race="${r.n}" style="--comp-color:${color}">
       <div class="meta">
@@ -646,11 +641,11 @@ function raceRowHTML(r, day){
       </div>
       <div class="comp">${r.c}</div>
       <div class="crews">
-        <div>
+        <div class="crew-pick${berksPicked?' picked':''}" data-side="berks">
           <div class="crew-label">Berks</div>
           <div class="crew-name">${r.berks}</div>
         </div>
-        <div>
+        <div class="crew-pick${bucksPicked?' picked':''}" data-side="bucks">
           <div class="crew-label">Bucks</div>
           <div class="crew-name">${r.bucks}</div>
         </div>
@@ -662,10 +657,6 @@ function raceRowHTML(r, day){
       <div class="check">
         <input type="checkbox" id="chk-${r.n}" ${st.ticked?'checked':''}>
       </div>
-      <div class="winner">
-        <label for="win-${r.n}">Winner</label>
-        <input id="win-${r.n}" type="text" placeholder="e.g. Berks — Leander Club" value="${(st.winner||'').replace(/"/g,'&quot;')}">
-      </div>
     </div>
   `;
 }
@@ -673,7 +664,7 @@ function raceRowHTML(r, day){
 function wireRow(el, r, day){
   const chk = el.querySelector('input[type="checkbox"]');
   const num = el.querySelector('.num input');
-  const win = el.querySelector('.winner input');
+  const picks = el.querySelectorAll('.crew-pick');
 
   chk.addEventListener('change', ()=>{
     state[day][r.n] = state[day][r.n] || defaultState(day, r.n);
@@ -689,10 +680,15 @@ function wireRow(el, r, day){
     saveRace(day, r.n);
   });
 
-  win.addEventListener('input', ()=>{
-    state[day][r.n] = state[day][r.n] || defaultState(day, r.n);
-    state[day][r.n].winner = win.value;
-    saveRace(day, r.n);
+  picks.forEach(pick=>{
+    pick.addEventListener('click', ()=>{
+      state[day][r.n] = state[day][r.n] || defaultState(day, r.n);
+      const side = pick.dataset.side;
+      // tap again to un-pick, tap the other side to switch
+      state[day][r.n].winner = (state[day][r.n].winner === side) ? '' : side;
+      picks.forEach(p => p.classList.toggle('picked', p.dataset.side === state[day][r.n].winner));
+      saveRace(day, r.n);
+    });
   });
 }
 
@@ -741,13 +737,13 @@ function applyStateToDOM(){
     const st = (state[currentDay] && state[currentDay][r.n]) || defaultState(currentDay, r.n);
     const chk = el.querySelector('input[type="checkbox"]');
     const num = el.querySelector('.num input');
-    const win = el.querySelector('.winner input');
+    const picks = el.querySelectorAll('.crew-pick');
     if(document.activeElement !== chk){
       chk.checked = !!st.ticked;
       el.classList.toggle('ticked', !!st.ticked);
     }
     if(document.activeElement !== num) num.value = st.num || '';
-    if(document.activeElement !== win) win.value = st.winner || '';
+    picks.forEach(p => p.classList.toggle('picked', p.dataset.side === st.winner));
   });
   buildTabs();
 }
