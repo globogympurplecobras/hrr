@@ -195,18 +195,55 @@
   }
   .empty-day strong{ display:block; color:var(--ink); font-size:1.05rem; margin-bottom:6px; }
 
-  .interval{
-    text-align:center;
-    font-weight:700;
-    letter-spacing:1.5px;
-    text-transform:uppercase;
-    font-size:.78rem;
-    color:#6b5b46;
-    background:repeating-linear-gradient(45deg,#efe6d0,#efe6d0 8px,#e9dfc6 8px,#e9dfc6 16px);
-    border:1px solid #d9cba5;
-    border-radius:10px;
-    padding:10px;
+  .session{
     margin:18px 0;
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+    background:#fff;
+  }
+  .session-summary{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    cursor:pointer;
+    padding:13px 16px;
+    font-weight:800;
+    font-size:.95rem;
+    color:var(--ink);
+    list-style:none;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .session-summary::-webkit-details-marker{ display:none; }
+  .session-summary::marker{ content:""; }
+  .session-chevron{
+    display:inline-block;
+    font-size:.75rem;
+    color:#8a8577;
+    transition:transform .15s;
+    flex:0 0 auto;
+  }
+  .session[open] .session-chevron{ transform:rotate(90deg); }
+  .session-titles{ display:flex; flex-direction:column; gap:1px; }
+  .session-sub{
+    font-size:.68rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    color:#8a8577;
+  }
+  .session-count{
+    margin-left:auto;
+    font-weight:600;
+    font-size:.78rem;
+    color:#8a8577;
+    white-space:nowrap;
+  }
+  .session-body{
+    padding:0 10px 10px;
+    background:var(--paper);
+    border-top:1px solid var(--line);
   }
   .race{
     background:#fff;
@@ -692,6 +729,39 @@ function wireRow(el, r, day){
   });
 }
 
+function splitIntoSessions(races){
+  const segments = [[]];
+  const precededBy = [null];
+  races.forEach(r=>{
+    if(r.interval){
+      precededBy.push(r.interval);
+      segments.push([]);
+    }else{
+      segments[segments.length-1].push(r);
+    }
+  });
+  const names = segments.length === 3 ? ["Morning","Afternoon","Evening"]
+    : segments.length === 2 ? ["Morning","Afternoon"]
+    : segments.length === 1 ? ["All races"]
+    : segments.map((_,i)=>`Session ${i+1}`);
+  return segments.map((races,i)=>({ name: names[i], precededBy: precededBy[i], races }))
+    .filter(seg => seg.races.length > 0);
+}
+
+const COLLAPSE_KEY = 'hrr-session-collapse-v3';
+let collapseState = {};
+try{ collapseState = JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}'); }catch(e){ collapseState = {}; }
+
+function isSessionOpen(day, sessionName){
+  const saved = collapseState[day] && collapseState[day][sessionName];
+  return saved === undefined ? true : saved; // default: expanded
+}
+function setSessionOpen(day, sessionName, open){
+  collapseState[day] = collapseState[day] || {};
+  collapseState[day][sessionName] = open;
+  try{ localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapseState)); }catch(e){}
+}
+
 function render(){
   main.innerHTML = '';
   const d = schedule.days[currentDay];
@@ -703,24 +773,50 @@ function render(){
     return;
   }
   const f = (filterBox.value||'').trim().toLowerCase();
-  d.races.forEach(r=>{
-    if(r.interval){
-      if(!f){
-        const div = document.createElement('div');
-        div.className = 'interval';
-        div.textContent = r.interval;
-        main.appendChild(div);
-      }
-      return;
-    }
-    const hay = `${r.n} ${r.t} ${r.c} ${r.berks} ${r.bucks}`.toLowerCase();
-    if(f && !hay.includes(f)) return;
+  const sessions = splitIntoSessions(d.races);
 
-    const wrap = document.createElement('div');
-    wrap.innerHTML = raceRowHTML(r, currentDay).trim();
-    const el = wrap.firstElementChild;
-    main.appendChild(el);
-    wireRow(el, r, currentDay);
+  sessions.forEach(session=>{
+    const visibleRaces = f
+      ? session.races.filter(r => `${r.n} ${r.t} ${r.c} ${r.berks} ${r.bucks}`.toLowerCase().includes(f))
+      : session.races;
+    if(f && visibleRaces.length === 0) return; // hide empty sessions while filtering
+
+    const details = document.createElement('details');
+    details.className = 'session';
+    const open = f ? true : isSessionOpen(currentDay, session.name);
+    if(open) details.open = true;
+
+    const subLabel = session.precededBy ? `Starts after ${session.precededBy}` : '';
+    const summary = document.createElement('summary');
+    summary.className = 'session-summary';
+    summary.innerHTML = `
+      <span class="session-chevron">▸</span>
+      <span class="session-titles">
+        <span>${session.name}</span>
+        ${subLabel ? `<span class="session-sub">${subLabel}</span>` : ''}
+      </span>
+      <span class="session-count">${visibleRaces.length} race${visibleRaces.length===1?'':'s'}</span>
+    `;
+    details.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'session-body';
+    visibleRaces.forEach(r=>{
+      const wrap = document.createElement('div');
+      wrap.innerHTML = raceRowHTML(r, currentDay).trim();
+      const el = wrap.firstElementChild;
+      body.appendChild(el);
+      wireRow(el, r, currentDay);
+    });
+    details.appendChild(body);
+
+    if(!f){
+      details.addEventListener('toggle', ()=>{
+        setSessionOpen(currentDay, session.name, details.open);
+      });
+    }
+
+    main.appendChild(details);
   });
 }
 
