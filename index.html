@@ -546,6 +546,16 @@
     padding:2px 8px;
     border-radius:20px;
   }
+  .pipe-clip{
+    font-size:.72rem;
+    font-weight:800;
+    letter-spacing:.4px;
+    color:var(--pipe-bg);
+    background:var(--pipe-text);
+    padding:2px 9px;
+    border-radius:6px;
+    font-variant-numeric:tabular-nums;
+  }
   .pipe-status{
     margin-left:auto;
     font-size:.68rem;
@@ -1110,6 +1120,7 @@ function pipeRaceHTML(r, day){
         <span class="pipe-raceno">#${r.n}</span>
         <span class="pipe-time">${r.t}</span>
         <span class="pipe-comp">${r.c}</span>
+        ${st.num ? `<span class="pipe-clip">Clip ${st.num}</span>` : ''}
         <span class="pipe-status">${statusLabel}</span>
       </div>
       <div class="pipe-crews"><b>Berks</b> ${r.berks} &nbsp;·&nbsp; <b>Bucks</b> ${r.bucks}</div>
