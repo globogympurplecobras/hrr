@@ -164,6 +164,34 @@
     font-weight:700;
     cursor:pointer;
   }
+  .evening-clip-control{
+    border-left:1px dashed var(--line);
+    padding-left:14px;
+  }
+  .evs-toggle{
+    display:flex;
+    border:2px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  .evs-btn{
+    background:#fff;
+    border:none;
+    padding:7px 10px;
+    font-size:.7rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    color:#6b6558;
+    cursor:pointer;
+  }
+  .evs-btn + .evs-btn{
+    border-left:2px solid var(--line);
+  }
+  .evs-btn.active{
+    background:var(--accent);
+    color:#fff;
+  }
 
   .legend{
     display:flex;
@@ -641,6 +669,15 @@
     <input id="firstClip" type="text" inputmode="numeric" maxlength="3" pattern="[0-9]*">
     <button id="renumberBtn">Renumber day</button>
   </div>
+  <div class="clip-control evening-clip-control" id="eveningClipControl" style="display:none">
+    <label for="eveningClip">Evening clip #</label>
+    <input id="eveningClip" type="text" inputmode="numeric" maxlength="3" pattern="[0-9]*">
+    <div class="evs-toggle" id="evsToggle">
+      <button type="button" class="evs-btn" data-evs="1">EVS 1</button>
+      <button type="button" class="evs-btn" data-evs="2">EVS 2</button>
+    </div>
+    <button id="renumberEveningBtn">Renumber evening</button>
+  </div>
 </div>
 
 <div class="legend" id="legend"></div>
@@ -723,6 +760,8 @@ let schedule = null;      // loaded from data/schedule.json
 let currentDay = "wednesday";
 let state = {};           // per-day: { [raceNo]: {ticked, num, winner} }
 let startClips = {};      // per-day: "311"
+let eveningStartClips = {}; // per-day: "611" — separate cascade just for the evening session
+let eveningEvs = {};        // per-day: "1" | "2" — which EVS machine the evening session is on
 let useFirebase = false;
 let dbRoot = null;
 const LOCAL_KEY = 'hrr-race-state-v3';
@@ -737,6 +776,10 @@ const tabsEl = document.getElementById('tabs');
 const dayLabelEl = document.getElementById('dayLabel');
 const firstClipInput = document.getElementById('firstClip');
 const daybarEl = document.getElementById('daybar');
+const eveningClipControl = document.getElementById('eveningClipControl');
+const eveningClipInput = document.getElementById('eveningClip');
+const renumberEveningBtn = document.getElementById('renumberEveningBtn');
+const evsToggle = document.getElementById('evsToggle');
 const viewTimetableBtn = document.getElementById('viewTimetableBtn');
 const viewPipelineBtn = document.getElementById('viewPipelineBtn');
 const pipelineBadge = document.getElementById('pipelineBadge');
@@ -780,8 +823,80 @@ function switchDay(day){
   dayLabelEl.textContent = d.label;
   firstClipInput.value = startClips[day] || DEFAULT_START_CLIP[day] || "311";
   filterBox.value = '';
+  updateEveningControlUI();
   render();
 }
+
+// ---------- Evening-session clip cascade (separate EVS machine) ----------
+function eveningSessionForDay(day){
+  const d = schedule.days[day];
+  if(!d || !d.races || d.races.length === 0) return null;
+  const sessions = splitIntoSessions(d.races);
+  return sessions.find(s => s.name === 'Evening') || null;
+}
+
+function updateEveningControlUI(){
+  const evening = eveningSessionForDay(currentDay);
+  eveningClipControl.style.display = evening ? '' : 'none';
+  if(!evening) return;
+  if(eveningClipInput !== document.activeElement){
+    eveningClipInput.value = eveningStartClips[currentDay] || '';
+  }
+  const evs = eveningEvs[currentDay] || '1';
+  evsToggle.querySelectorAll('.evs-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.evs === evs);
+  });
+}
+
+function saveEveningStartClip(day, value){
+  eveningStartClips[day] = value;
+  if(useFirebase){
+    dbRoot.child(`eveningStartClip/${day}`).set(value).catch(()=>{
+      setStatus('error', 'Save failed — check connection');
+    });
+  }else{
+    persistLocal();
+  }
+}
+
+function saveEveningEvs(day, value){
+  eveningEvs[day] = value;
+  if(useFirebase){
+    dbRoot.child(`eveningEvs/${day}`).set(value).catch(()=>{
+      setStatus('error', 'Save failed — check connection');
+    });
+  }else{
+    persistLocal();
+  }
+}
+
+evsToggle.querySelectorAll('.evs-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    saveEveningEvs(currentDay, btn.dataset.evs);
+    updateEveningControlUI();
+  });
+});
+
+eveningClipInput.addEventListener('input', ()=>{
+  eveningClipInput.value = eveningClipInput.value.replace(/[^0-9]/g,'').slice(0,3);
+});
+
+renumberEveningBtn.addEventListener('click', ()=>{
+  const val = eveningClipInput.value.trim();
+  if(val.length !== 3){
+    alert('Enter a 3-digit starting clip number first, e.g. 611');
+    return;
+  }
+  const evening = eveningSessionForDay(currentDay);
+  if(!evening) return;
+  saveEveningStartClip(currentDay, val);
+  evening.races.forEach((r, idx)=>{
+    state[currentDay][r.n] = state[currentDay][r.n] || defaultState(currentDay, r.n);
+    state[currentDay][r.n].num = clipNumberFromBase(val, idx);
+    saveRace(currentDay, r.n);
+  });
+  render();
+});
 
 function switchView(view){
   currentView = view;
@@ -839,6 +954,16 @@ function initFirebase(){
       firstClipInput.value = startClips[currentDay] || DEFAULT_START_CLIP[currentDay] || "311";
     });
 
+    dbRoot.child('eveningStartClip').on('value', snap=>{
+      eveningStartClips = snap.val() || {};
+      updateEveningControlUI();
+    });
+
+    dbRoot.child('eveningEvs').on('value', snap=>{
+      eveningEvs = snap.val() || {};
+      updateEveningControlUI();
+    });
+
     dbRoot.child('races').on('value', snap=>{
       const val = snap.val() || {};
       DAY_ORDER.forEach(day=>{
@@ -856,13 +981,19 @@ function initFirebase(){
   }
 }
 
+function persistLocal(){
+  try{
+    localStorage.setItem(LOCAL_KEY, JSON.stringify({state, startClips, eveningStartClips, eveningEvs}));
+  }catch(e){}
+}
+
 function saveRace(day, n){
   if(useFirebase){
     dbRoot.child(`races/${day}/${n}`).set(state[day][n]).catch(()=>{
       setStatus('error', 'Save failed — check connection');
     });
   }else{
-    localStorage.setItem(LOCAL_KEY, JSON.stringify({state, startClips}));
+    persistLocal();
     setStatus('local', 'Saved on this device only');
   }
 }
@@ -874,7 +1005,7 @@ function saveStartClip(day, value){
       setStatus('error', 'Save failed — check connection');
     });
   }else{
-    localStorage.setItem(LOCAL_KEY, JSON.stringify({state, startClips}));
+    persistLocal();
   }
 }
 
@@ -884,9 +1015,12 @@ function initLocalFallback(){
     const parsed = raw ? JSON.parse(raw) : {};
     state = parsed.state || {};
     startClips = parsed.startClips || {};
-  }catch(e){ state = {}; startClips = {}; }
+    eveningStartClips = parsed.eveningStartClips || {};
+    eveningEvs = parsed.eveningEvs || {};
+  }catch(e){ state = {}; startClips = {}; eveningStartClips = {}; eveningEvs = {}; }
   DAY_ORDER.forEach(day=>{ if(!state[day]) state[day] = {}; });
   firstClipInput.value = startClips[currentDay] || DEFAULT_START_CLIP[currentDay] || "311";
+  updateEveningControlUI();
   render();
   setStatus('local', 'Local-only mode — add Firebase config to share (see README)');
 }
@@ -1276,16 +1410,47 @@ document.getElementById('renumberBtn').addEventListener('click', ()=>{
   render();
 });
 
+// Picks whichever day tab matches today's date, based on each day's
+// label (e.g. "Wednesday 1 July 2026"). Falls back to the nearest
+// upcoming day if today falls outside the regatta week, or the last
+// published day if the regatta is already over.
+function pickDefaultDay(){
+  const monthNames = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+  function parseLabelDate(label){
+    const m = label && label.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+    if(!m) return null;
+    const day = parseInt(m[1],10);
+    const month = monthNames.indexOf(m[2].toLowerCase());
+    const year = parseInt(m[3],10);
+    if(month<0) return null;
+    return new Date(year, month, day);
+  }
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const candidates = DAY_ORDER
+    .map(day=>({day, date: parseLabelDate(schedule.days[day] && schedule.days[day].label)}))
+    .filter(c=>c.date);
+  if(candidates.length === 0) return currentDay;
+  candidates.sort((a,b)=>a.date-b.date);
+  const exact = candidates.find(c=>c.date.getTime() === today.getTime());
+  if(exact) return exact.day;
+  const upcoming = candidates.find(c=>c.date.getTime() > today.getTime());
+  if(upcoming) return upcoming.day;
+  return candidates[candidates.length-1].day;
+}
+
 // ---------- Boot ----------
 fetch('data/schedule.json', {cache:'no-store'})
   .then(res=>res.json())
   .then(data=>{
     schedule = data;
+    currentDay = pickDefaultDay();
     buildTabs();
     buildLegend();
     const d = schedule.days[currentDay];
     dayLabelEl.textContent = d.label;
-    firstClipInput.value = DEFAULT_START_CLIP[currentDay];
+    firstClipInput.value = startClips[currentDay] || DEFAULT_START_CLIP[currentDay];
+    updateEveningControlUI();
     viewTimetableBtn.classList.toggle('active', currentView === 'timetable');
     viewPipelineBtn.classList.toggle('active', currentView === 'pipeline');
     daybarEl.style.display = currentView === 'pipeline' ? 'none' : '';
