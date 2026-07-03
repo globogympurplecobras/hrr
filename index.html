@@ -174,9 +174,10 @@
     border-radius:8px;
     overflow:hidden;
   }
-  .evs-btn{
+  .evs-toggle .evs-btn{
     background:#fff;
     border:none;
+    border-radius:0;
     padding:7px 10px;
     font-size:.7rem;
     font-weight:700;
@@ -185,10 +186,10 @@
     color:#6b6558;
     cursor:pointer;
   }
-  .evs-btn + .evs-btn{
+  .evs-toggle .evs-btn + .evs-btn{
     border-left:2px solid var(--line);
   }
-  .evs-btn.active{
+  .evs-toggle .evs-btn.active{
     background:var(--accent);
     color:#fff;
   }
