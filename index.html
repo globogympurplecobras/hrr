@@ -175,23 +175,24 @@
     overflow:hidden;
   }
   .evs-toggle .evs-btn{
-    background:#fff;
+    background:#eeeae0;
     border:none;
     border-radius:0;
-    padding:7px 10px;
+    padding:7px 12px;
     font-size:.7rem;
     font-weight:700;
     text-transform:uppercase;
     letter-spacing:.4px;
-    color:#6b6558;
+    color:#a39d8c;
     cursor:pointer;
   }
   .evs-toggle .evs-btn + .evs-btn{
     border-left:2px solid var(--line);
   }
   .evs-toggle .evs-btn.active{
-    background:var(--accent);
-    color:#fff;
+    background:#f5a623;
+    color:#4a2e00;
+    box-shadow:inset 0 0 0 2px #fff;
   }
 
   .legend{
@@ -845,7 +846,9 @@ function updateEveningControlUI(){
   }
   const evs = eveningEvs[currentDay] || '1';
   evsToggle.querySelectorAll('.evs-btn').forEach(btn=>{
-    btn.classList.toggle('active', btn.dataset.evs === evs);
+    const on = btn.dataset.evs === evs;
+    btn.classList.toggle('active', on);
+    btn.textContent = (on ? '✓ ' : '') + 'EVS ' + btn.dataset.evs;
   });
 }
 
