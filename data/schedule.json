@@ -2801,8 +2801,222 @@
     },
     "sunday": {
       "label": "Sunday 5 July 2026",
-      "races": []
+      "races": [
+        {
+          "n": 1,
+          "t": "10:30",
+          "c": "Britannia",
+          "berks": "677 K.A.R.Z.V. De Hoop, NED",
+          "bucks": "679 London R.C. 'A'"
+        },
+        {
+          "n": 2,
+          "t": "10:40",
+          "c": "Hambleden",
+          "berks": "770 A. Santruckova & P. Flamikova, CZE",
+          "bucks": "769 L. Meriano & A. Codato, ITA"
+        },
+        {
+          "n": 3,
+          "t": "10:50",
+          "c": "Pr Wales",
+          "berks": "443 Leander Club",
+          "bucks": "446 Nautilus R.C. & Edinburgh Univ."
+        },
+        {
+          "n": 4,
+          "t": "11:00",
+          "c": "Island",
+          "berks": "249 Univ. of Washington, 'A' USA",
+          "bucks": "208 Brown Univ., 'A' USA"
+        },
+        {
+          "n": 5,
+          "t": "11:10",
+          "c": "D Sculls",
+          "berks": "783 M. Mackovic & N. Pimenov, SRB",
+          "bucks": "781 M.E.C. Haywood & J.J. Knight"
+        },
+        {
+          "n": 6,
+          "t": "11:20",
+          "c": "Danesfield",
+          "berks": "485 Leander Club",
+          "bucks": "491 Molesey B.C."
+        },
+        {
+          "n": 7,
+          "t": "11:30",
+          "c": "Fawley",
+          "berks": "565 Leander Club",
+          "bucks": "598 Tideway Scullers' Sch."
+        },
+        {
+          "n": 8,
+          "t": "11:40",
+          "c": "Visitors'",
+          "berks": "358 Nautilus R.C. 'A'",
+          "bucks": "356 Leander Club 'B'"
+        },
+        {
+          "n": 9,
+          "t": "11:50",
+          "c": "Town",
+          "berks": "344 Hollandia R.C., NED",
+          "bucks": "346 Nautilus R.C. 'A'"
+        },
+        {
+          "n": 10,
+          "t": "12:00",
+          "c": "Ladies'",
+          "berks": "6 Leander Club",
+          "bucks": "5 Cambridge Univ. & Harvard Univ., USA"
+        },
+        {
+          "n": 11,
+          "t": "12:10",
+          "c": "Thames",
+          "berks": "62 Thames R.C. 'A'",
+          "bucks": "44 London R.C. 'A'"
+        },
+        {
+          "n": 12,
+          "t": "12:20",
+          "c": "D Jubilee",
+          "berks": "653 Tideway Scullers' Sch. 'A'",
+          "bucks": "632 Marlow R.C. 'A'"
+        },
+        {
+          "n": 13,
+          "t": "12:30",
+          "c": "Grand",
+          "berks": "2 Team Italia, ITA",
+          "bucks": "1 Oxford Brookes Univ. & Leander Club"
+        },
+        {
+          "n": 14,
+          "t": "12:40",
+          "c": "P Philip",
+          "berks": "324 Shiplake Coll.",
+          "bucks": "314 Headington Sch."
+        },
+        {
+          "interval": "Luncheon interval"
+        },
+        {
+          "n": 15,
+          "t": "14:00",
+          "c": "Stewards'",
+          "berks": "340 Leander Club",
+          "bucks": "342 Nautilus R.C."
+        },
+        {
+          "n": 16,
+          "t": "14:10",
+          "c": "Wargrave",
+          "berks": "103 Thames R.C. 'A'",
+          "bucks": "104 Thames R.C. 'B'"
+        },
+        {
+          "n": 17,
+          "t": "14:20",
+          "c": "Goblets",
+          "berks": "756 S.D. Ford & A. Grundy",
+          "bucks": "761 J.N. Wincomb & T.W.K. Digby"
+        },
+        {
+          "n": 18,
+          "t": "14:30",
+          "c": "Stonor",
+          "berks": "801 B.C. Francis & L.J. Spoors, NZL",
+          "bucks": "805 N.B.M. Phillips & H.A.G. Marshall"
+        },
+        {
+          "n": 19,
+          "t": "14:40",
+          "c": "Diamonds",
+          "berks": "818 D.M.V. Gonçalves, POR",
+          "bucks": "840 O. Zeidler, GER"
+        },
+        {
+          "n": 20,
+          "t": "14:50",
+          "c": "Remenham",
+          "berks": "4 Team Italia, ITA",
+          "bucks": "3 Leander Club & Molesey B.C."
+        },
+        {
+          "n": 21,
+          "t": "15:00",
+          "c": "Temple",
+          "berks": "199 Univ. of Washington, USA",
+          "bucks": "127 Cambridge Univ. 'A'"
+        },
+        {
+          "n": 22,
+          "t": "15:10",
+          "c": "Bridge",
+          "berks": "20 Molesey B.C. & Univ. of London",
+          "bucks": "24 Thames R.C."
+        },
+        {
+          "n": 23,
+          "t": "15:20",
+          "c": "Q Mother",
+          "berks": "429 Leander Club & Twickenham R.C.",
+          "bucks": "431 Team Italia, ITA"
+        },
+        {
+          "n": 24,
+          "t": "15:30",
+          "c": "P Royal",
+          "berks": "849 L.R. Henry",
+          "bucks": "852 M. Lobnig, AUT"
+        },
+        {
+          "n": 25,
+          "t": "15:40",
+          "c": "PE",
+          "berks": "286 St. Edward's Sch.",
+          "bucks": "288 St. Paul's Sch."
+        },
+        {
+          "n": 26,
+          "t": "15:50",
+          "c": "P Grace",
+          "berks": "433 Leander Club & Reading Univ.",
+          "bucks": "432 Hollandia R.C., NED"
+        },
+        {
+          "n": 27,
+          "t": "16:00",
+          "c": "Q Victoria",
+          "berks": "512 A.A.S.R. Skøll, NED",
+          "bucks": "526 Reading Univ. 'A'"
+        },
+        {
+          "n": 28,
+          "t": "16:10",
+          "c": "P Albert",
+          "berks": "717 Imperial Coll. London",
+          "bucks": "727 Newcastle Univ."
+        },
+        {
+          "n": 29,
+          "t": "16:20",
+          "c": "Ps Wales",
+          "berks": "466 Leander Club & Hartpury Univ.",
+          "bucks": "471 Reading Univ."
+        },
+        {
+          "n": 30,
+          "t": "16:30",
+          "c": "Wyfold",
+          "berks": "413 Sydney R.C. 'A', AUS",
+          "bucks": "415 Thames R.C. 'A'"
+        }
+      ]
     }
   },
-  "lastUpdated": "2026-07-04T09:00:00Z"
+  "lastUpdated": "2026-07-05T09:00:00Z"
 }
